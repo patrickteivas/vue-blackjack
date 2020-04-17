@@ -1,7 +1,7 @@
 <template>
   <div v-if="$store.state.isPlaying">
-    <Hand :cards="$store.state.playerOneCards" :player="1"/>
-    <Hand :cards="$store.state.playerTwoCards" :player="2"/>
+    <Hand :player="$store.state.players[0]"/>
+    <Hand :player="$store.state.players[1]"/>
   </div>
 </template>
 

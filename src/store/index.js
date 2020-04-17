@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
 import axios from 'axios';
+import playerModel from '../utils/playerModel';
 
 Vue.use(Vuex);
 
@@ -8,11 +9,8 @@ export default new Vuex.Store({
   state: {
     deckId: null,
     isPlaying: false,
-    playerOneCards: [],
-    playerTwoCards: [],
-    whoPlaying: 1,
-    playerOneScore: 0,
-    playerTwoScore: 0,
+    players: [],
+    whoseTurn: 1,
     resultTitle: ''
   },
   mutations: {
@@ -22,26 +20,15 @@ export default new Vuex.Store({
     SET_IS_PLAYING(state, payload) {
       state.isPlaying = payload;
     },
-    ADD_PLAYER_ONE_CARDS(state, payload) {
-      state.playerOneCards.push(...payload);
+    ADD_CARD_TO_PLAYER(state, payload) {
+      const player = state.players.find(player => player.id === payload.id);
+      player.cards.push(...payload.card);
     },
-    ADD_PLAYER_TWO_CARDS(state, payload) {
-      state.playerTwoCards.push(...payload);
+    SET_PLAYERS(state, payload) {
+      state.players = payload;
     },
-    SET_PLAYER_ONE_CARDS(state, payload) {
-      state.playerOneCards = payload;
-    },
-    SET_PLAYER_TWO_CARDS(state, payload) {
-      state.playerTwoCards = payload;
-    },
-    SET_WHO_PLAYING(state, payload) {
-      state.whoPlaying = payload;
-    },
-    SET_PLAYER_ONE_SCORE(state, payload) {
-      state.playerOneScore = payload;
-    },
-    SET_PLAYER_TWO_SCORE(state, payload) {
-      state.playerTwoScore = payload;
+    SET_WHOSE_TURN(state, payload) {
+      state.whoseTurn = payload;
     },
     SET_RESULT_TITLE(state, payload) {
       state.resultTitle = payload;
@@ -50,12 +37,16 @@ export default new Vuex.Store({
   actions: {
     async startGame(context) {
       await context.dispatch('initDeck');
-      context.commit('SET_IS_PLAYING', true);
-      context.commit('SET_WHO_PLAYING', 1);
+      context.commit('SET_WHOSE_TURN', 1);
       context.commit('SET_RESULT_TITLE', '');
+      context.commit('SET_PLAYERS', []);
+
       const cards = await context.dispatch('drawCards', 4);
-      context.commit('SET_PLAYER_ONE_CARDS', [cards[0], cards[2]]);
-      context.commit('SET_PLAYER_TWO_CARDS', [cards[1], cards[3]]);
+      context.dispatch('createPlayer', {id: 1, cards: [cards[0], cards[2]]}); // Hardcoded 2 players
+      context.dispatch('createPlayer', {id: 2, cards: [cards[1], cards[3]]});
+      context.dispatch('updatePlayerScore', 1);
+      context.dispatch('updatePlayerScore', 2);
+      context.commit('SET_IS_PLAYING', true);
     },
     async initDeck(context) {
       const newDeck = (await axios.get('https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count=1')).data;
@@ -80,6 +71,16 @@ export default new Vuex.Store({
         drawnCards.push({weight, image: rawDrawnCard.image});
       }
       return drawnCards;
+    },
+    createPlayer({state}, playerInfo) {
+      let player = JSON.parse(JSON.stringify({...playerModel, ...playerInfo})); // Native JS object copying
+      state.players.push(player);
+    },
+    updatePlayerScore({state}, id) {
+      const player = state.players.find(player => player.id === id);
+      let score = 0;
+      player.cards.forEach(card => score += parseInt(card.weight));
+      player.score = score;
     }
   },
   getters: {}
